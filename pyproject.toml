@@ -4,11 +4,13 @@ version = "0.1.0"
 description = ""
 authors = ["thorwolpert <thor@wolpert.ca>"]
 readme = "README.md"
-packages = [{include = "flask_api"}]
+packages = [{include = "flask_api", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 flask = "^2.2.3"
+launchdarkly-server-sdk = "^8.1.1"
+python-dotenv = "^1.0.0"
 
 
 [tool.poetry.group.test.dependencies]
