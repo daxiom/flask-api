@@ -11,6 +11,9 @@ python = "^3.11"
 flask = "^2.2.3"
 launchdarkly-server-sdk = "^8.1.1"
 python-dotenv = "^1.0.0"
+flask-sqlalchemy = "^3.0.3"
+flask-migrate = "^4.0.4"
+psycopg2-binary = "^2.9.5"
 
 
 [tool.poetry.group.test.dependencies]

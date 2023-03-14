@@ -15,6 +15,11 @@ repos:
     rev: 23.1.0
     hooks:
       - id: black
+        args: # arguments to configure black
+          - --line-length=120
+          - --exclude="""\.git |
+              \.__pycache__
+
   - repo: https://github.com/PyCQA/flake8
     rev: 6.0.0
     hooks:
@@ -22,6 +27,9 @@ repos:
         additional_dependencies:
           - flake8-bugbear
           - flake8-implicit-str-concat
+        args: # arguments to configure black
+          - "--max-line-length=120"
+
   - repo: https://github.com/peterdemin/pip-compile-multi
     rev: v2.6.2
     hooks:
