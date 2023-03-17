@@ -39,6 +39,7 @@ class Config:
 
 class Production(Config):
     DEBUG = False
+    TESTING = False
 
 
 class Sandbox(Config):
