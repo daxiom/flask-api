@@ -54,3 +54,15 @@ class Development(Config):
 
 class Testing(Config):
     TESTING = True
+
+    DATABASE_TEST_USERNAME = os.getenv("DATABASE_TEST_USERNAME", "")
+    DATABASE_TEST_PASSWORD = os.getenv("DATABASE_TEST_PASSWORD", "")
+    DATABASE_TEST_NAME = os.getenv("DATABASE_TEST_NAME", "")
+    DATABASE_TEST_HOST = os.getenv("DATABASE_TEST_HOST", "")
+    DATABASE_TEST_PORT = os.getenv("DATABASE_TEST_PORT", "5432")  # POSTGRESQL
+
+    SQLALCHEMY_DATABASE_URI = (
+        f"postgresql://{DATABASE_TEST_USERNAME}"
+        ":{DATABASE_TEST_PASSWORD}@{DATABASE_TEST_HOST}"
+        ":{DATABASE_TEST_PORT}/{DATABASE_TEST_NAME}"
+    )

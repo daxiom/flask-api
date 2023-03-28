@@ -10,7 +10,7 @@ from enum import auto
 from flask import current_app
 
 from .db import db
-from flask_api.utils.base import BaseEnum
+from flask_api.utils.enum import BaseEnum
 
 
 class UserRoles(BaseEnum):
