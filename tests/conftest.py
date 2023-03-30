@@ -90,8 +90,15 @@ def load_psql_file(user: str, password: str, database: str, file_path: str, host
 def drop_test_db(user: str, password: str, database: str, host: str = "localhost", port: int = 1521):
     """Delete the database in our .devcontainer launched postgres DB."""
     DATABASE_URI = f"postgresql://{user}:{password}@{host}:{port}/{user}"
+    close_all = f"""
+        SELECT pg_terminate_backend(pg_stat_activity.pid)
+        FROM pg_stat_activity
+        WHERE pg_stat_activity.datname = '{database}'
+        AND pid <> pg_backend_pid();
+    """
     with contextlib.suppress(sqlalchemy.exc.ProgrammingError):
         with sqlalchemy.create_engine(DATABASE_URI, isolation_level="AUTOCOMMIT").connect() as conn:
+            conn.execute(text(close_all))
             conn.execute(text(f"DROP DATABASE {database}"))
 
 
@@ -102,8 +109,21 @@ def migrate_database(app: Flask, db: SQLAlchemy):
 
 
 @pytest.fixture(scope="session")
-def app():
-    app = create_app("config.Testing")
+def temp_database_name():
+    temp_database_name = (SERVICE_NAME + uuid4().hex)[:31]
+
+    return temp_database_name
+
+
+@pytest.fixture(scope="session")
+def app(temp_database_name):
+    global DB_NAME
+    DB_NAME = temp_database_name
+    Testing.DB_NAME = temp_database_name
+    Testing.DATABASE_TEST_NAME = temp_database_name
+    Testing.SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{temp_database_name}"
+
+    app = create_app(Testing)
 
     yield app
 
@@ -117,16 +137,19 @@ def client(app):
 @pytest.fixture(scope="session")
 def db(app):  # pylint: disable=redefined-outer-name, invalid-name
     """Return a session-wide initialised database."""
-    temp_database_name = (SERVICE_NAME + uuid4().hex)[:31]
     with app.app_context():
-        create_test_db(DB_USER, DB_PASS, temp_database_name, DB_HOST, DB_PORT)
-        migrate_database(app, _db)
-        load_sql_test_data(user=DB_USER, password=DB_PASS, database=temp_database_name, host=DB_HOST, port=DB_PORT)
+        create_test_db(DB_USER, DB_PASS, DB_NAME, DB_HOST, DB_PORT)
+        try:
+            migrate_database(app, _db)
+        except Exception as err:
+            print(err)
+
+        load_sql_test_data(user=DB_USER, password=DB_PASS, database=DB_NAME, host=DB_HOST, port=DB_PORT)
 
         yield _db
 
         # Clean up
-        drop_test_db(DB_USER, DB_PASS, temp_database_name, DB_HOST, DB_PORT)
+        drop_test_db(DB_USER, DB_PASS, DB_NAME, DB_HOST, DB_PORT)
 
 
 @pytest.fixture(scope="function")
@@ -135,8 +158,10 @@ def session(db):  # pylint: disable=redefined-outer-name, invalid-name
     conn = db.engine.connect()
     txn = conn.begin()
 
+    # TODO: _make_scoped_session was made private in the new version
+    # Should review this to remove using private methods and find a public way
     options = dict(bind=conn, binds={})
-    sess = db.create_scoped_session(options=options)
+    sess = db._make_scoped_session(options=options)
 
     # establish  a SAVEPOINT just before beginning the test
     # (http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint)
@@ -162,9 +187,4 @@ def session(db):  # pylint: disable=redefined-outer-name, invalid-name
         sess.remove()
         # This instruction rollsback any commit that were executed in the tests.
         txn.rollback()
-
-        # Fix need here for ResourceClosedError('This Connection is closed') running
-        # the test suite. The problem does not occur running a small number of tests,
-        # such as in an individual file.
-        #
         conn.close()

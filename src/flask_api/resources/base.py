@@ -6,8 +6,8 @@ from flask import request
 bp = Blueprint("base", __name__)
 
 
-@bp.route("/", methods=("GET", "POST"))
-def register():
+@bp.route("/", methods=("GET",))
+def home():
     if request.method == "POST":
         return {}, 201
 
